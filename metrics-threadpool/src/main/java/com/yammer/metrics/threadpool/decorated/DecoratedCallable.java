@@ -5,7 +5,7 @@ import java.util.concurrent.Callable;
 import com.yammer.metrics.threadpool.InstrumentedCallable;
 
 /**
- * @author jiny
+ * @author softmentor
  *
  */
 public abstract class DecoratedCallable<V> extends InstrumentedCallable<V> {

@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * @author jiny
+ * @author softmentor
  * 
  */
 public class DecoratedCallableScheduledFuture<V> implements RunnableScheduledFuture<V> {

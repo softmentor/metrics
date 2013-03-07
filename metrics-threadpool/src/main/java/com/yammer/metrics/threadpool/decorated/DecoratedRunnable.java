@@ -3,7 +3,7 @@ package com.yammer.metrics.threadpool.decorated;
 import com.yammer.metrics.threadpool.InstrumentedRunnable;
 
 /**
- * @author jiny
+ * @author softmentor
  *
  */
 public abstract class DecoratedRunnable extends InstrumentedRunnable {
