@@ -3,7 +3,6 @@ package com.yammer.metrics.jedis;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -16,7 +15,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import redis.clients.jedis.JedisCommands;
 import redis.clients.jedis.Protocol;
 
 import com.yammer.metrics.Metrics;
@@ -32,17 +30,17 @@ import com.yammer.metrics.threadpool.InstrumentedThreadPoolExecutor;
 public class InstrumentedJedisPoolTest {
 
 	private static InstrumentedJedisPool JEDIS_POOL;
-	private JedisCommands instrumentedJedis;
+	private IJedisProxy jedisProxy;
 	private static final String host = "localhost";
 	private static final int port = Protocol.DEFAULT_PORT;
 	private int maxRedisWrites = 100;
-	//thread pool setting
+	// thread pool setting
 	private InstrumentedThreadPoolExecutor threadPool;
 	private int poolSize = 2;
 	private int maxPoolSize = 4;
 	private int keepAlive = 10;
 	private int maxJobs = 10;
-	
+
 	private MetricsRegistry registry;
 	private Gauge<Integer> gaugeCorePoolSize = null;
 	private Gauge<Integer> gaugeCurrentPoolSize = null;
@@ -51,8 +49,7 @@ public class InstrumentedJedisPoolTest {
 	private Gauge<Integer> gaugePendingJobs = null;
 	private Timer tasksExecTimer = null;
 	private Timer workerRunTimer = null;
-	
-	
+
 	@BeforeClass
 	public static void setupPool() {
 		System.out.println("BeforeClass");
@@ -63,8 +60,8 @@ public class InstrumentedJedisPoolTest {
 		System.out.println("Before");
 		InstrumentedJedisPool thePool = new InstrumentedJedisPool(host, port);
 		JEDIS_POOL = thePool;
-		
-		this.instrumentedJedis = InstrumentedJedis.newInstance(JEDIS_POOL);
+
+		this.jedisProxy = JedisProxy.newInstance(JEDIS_POOL);
 		// RejectedExecutionHandler implementation
 		RejectedExecutionHandlerImpl rejectionHandler = new RejectedExecutionHandlerImpl();
 		// Get the ThreadFactory implementation to use
@@ -76,8 +73,8 @@ public class InstrumentedJedisPoolTest {
 				maxPoolSize, keepAlive, TimeUnit.SECONDS,
 				new ArrayBlockingQueue<Runnable>(2), threadFactory,
 				rejectionHandler, "test");
-		
-		//ConsoleReporter.enable(20, TimeUnit.MILLISECONDS);
+
+		// ConsoleReporter.enable(20, TimeUnit.MILLISECONDS);
 	}
 
 	@Test
@@ -97,7 +94,7 @@ public class InstrumentedJedisPoolTest {
 				this.threadPool.tasksExecuted);
 		workerRunTimer = (Timer) registry.getAllMetrics().get(
 				this.threadPool.workerTimeMetric);
-		
+
 		// ====================================================
 		// start the monitoring thread
 		int monitorThreadDelay = 1; // in sec
@@ -109,7 +106,7 @@ public class InstrumentedJedisPoolTest {
 		for (int i = 0; i < maxJobs; i++) {
 			Runnable r = new WorkerThread("cmd" + i);
 			this.threadPool.submit(r);
-			System.out.println("Submitted runnable Id="+ r.hashCode());
+			System.out.println("Submitted runnable Id=" + r.hashCode());
 		}
 
 		Thread.sleep(10000);
@@ -123,13 +120,12 @@ public class InstrumentedJedisPoolTest {
 		monitor.shutdown();
 
 	}
-	
+
 	@Test
-	public void testSomething(){
+	public void testSomething() {
 		System.out.println("Testing Something ===============");
 	}
-	
-	
+
 	/**
 	 * @author softmentor
 	 * 
@@ -147,23 +143,26 @@ public class InstrumentedJedisPoolTest {
 			System.out.println(Thread.currentThread().getName()
 					+ " Run started for Command Id= " + hashCode());
 			processCommand();
-			//System.out.println(Thread.currentThread().getName() + " End.");
+			// System.out.println(Thread.currentThread().getName() + " End.");
 		}
 
 		private void processCommand() {
 			try {
-				String testKey = "testkey-" + Thread.currentThread().getName()+ "-" +hashCode() ;
+				String testKey = "testkey-" + Thread.currentThread().getName()
+						+ "-" + hashCode();
 				for (int i = 0; i <= maxRedisWrites; i++) {
 					String testValue = "testvalue-" + i;
-					instrumentedJedis.zadd(testKey, System.currentTimeMillis(), testValue);
-					
-					//Thread.sleep(2);
+					jedisProxy.zadd(testKey, System.currentTimeMillis(),
+							testValue);
+					// Thread.sleep(2);
 				}
-				assertTrue(new Long("10").equals(instrumentedJedis.zcard(testKey)));
-				System.out.println("key=" + testKey + "  Value=" + instrumentedJedis.zrangeByScoreWithScores(testKey, 0, -1));
-			/*} catch (InterruptedException e) {
-				e.printStackTrace();*/
-			} catch (Exception e){
+				assertTrue(new Long("10").equals(jedisProxy.zcard(testKey)));
+				System.out.println("key=" + testKey + "  Value="
+						+ jedisProxy.zrangeByScoreWithScores(testKey, 0, -1));
+				/*
+				 * } catch (InterruptedException e) { e.printStackTrace();
+				 */
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
@@ -184,7 +183,8 @@ public class InstrumentedJedisPoolTest {
 		@Override
 		public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
 			System.out.println("ActiveCount" + executor.getActiveCount());
-			System.out.println( "Id=" + r.hashCode() + r.toString() + " is rejected");
+			System.out.println("Id=" + r.hashCode() + r.toString()
+					+ " is rejected");
 		}
 
 	}
@@ -238,14 +238,21 @@ public class InstrumentedJedisPoolTest {
 						Matchers.is(gaugeCorePoolSize.getValue()));
 				assertThat(this.executor.getActiveCount(),
 						Matchers.is(gaugeActiveCount.getValue()));
-				System.out.println(String.format(
-						"[metric-submittasktimer] Min: %s, Max: %s, Mean: %s, Count: %d",
-						tasksExecTimer.getMin(), tasksExecTimer.getMax(),
-						tasksExecTimer.getMean(), tasksExecTimer.getCount()));
-				System.out.println(String.format(
-						"[metric-workertimer] Min: %s, Max: %s, Mean: %s, Count: %d m1: %s",
-						workerRunTimer.getMin(), workerRunTimer.getMax(),
-						workerRunTimer.getMean(), workerRunTimer.getCount(), workerRunTimer.getMeanRate()));
+				System.out
+						.println(String
+								.format("[metric-submittasktimer] Min: %s, Max: %s, Mean: %s, Count: %d",
+										tasksExecTimer.getMin(),
+										tasksExecTimer.getMax(),
+										tasksExecTimer.getMean(),
+										tasksExecTimer.getCount()));
+				System.out
+						.println(String
+								.format("[metric-workertimer] Min: %s, Max: %s, Mean: %s, Count: %d m1: %s",
+										workerRunTimer.getMin(),
+										workerRunTimer.getMax(),
+										workerRunTimer.getMean(),
+										workerRunTimer.getCount(),
+										workerRunTimer.getMeanRate()));
 
 				try {
 					Thread.sleep(seconds * 1000);
@@ -255,5 +262,5 @@ public class InstrumentedJedisPoolTest {
 			}
 
 		}
-	}	
+	}
 }

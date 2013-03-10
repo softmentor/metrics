@@ -8,9 +8,9 @@ import org.apache.commons.pool.impl.GenericObjectPool;
 import org.apache.commons.pool.impl.GenericObjectPool.Config;
 
 import redis.clients.jedis.BinaryJedis;
-import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Protocol;
+import redis.clients.jedis.exceptions.JedisConnectionException;
 import redis.clients.util.Pool;
 
 import com.yammer.metrics.Metrics;
@@ -79,7 +79,7 @@ import com.yammer.metrics.util.PercentGauge;
  * @author softmentor
  * 
  */
-public class InstrumentedJedisPool extends InstrumentedPool<Jedis> {
+public class InstrumentedJedisPool extends InstrumentedPool<InstrumentedJedis> {
 
 	private MetricsRegistry registry = null;
 	private static final String DEFAULT_METRIC_SCOPE = "default";
@@ -384,9 +384,14 @@ public class InstrumentedJedisPool extends InstrumentedPool<Jedis> {
 		@Metered
 		@ExceptionMetered
 		public Object makeObject() throws Exception {
-			final Jedis jedis = new Jedis(this.host, this.port, this.timeout);
+			final InstrumentedJedis jedis = new InstrumentedJedis(this.host, this.port, this.timeout);
 
-			jedis.connect();
+			try {
+				jedis.connect();
+			} catch (JedisConnectionException e) {
+				System.out.println("Not able to connect to host="+this.host + " port=" + this.port);
+				throw e;
+			}
 			if (null != this.password) {
 				jedis.auth(this.password);
 			}
@@ -416,8 +421,8 @@ public class InstrumentedJedisPool extends InstrumentedPool<Jedis> {
 		@Metered
 		@ExceptionMetered
 		public void destroyObject(final Object obj) throws Exception {
-			if (obj instanceof Jedis) {
-				final Jedis jedis = (Jedis) obj;
+			if (obj instanceof InstrumentedJedis) {
+				final InstrumentedJedis jedis = (InstrumentedJedis) obj;
 				if (jedis.isConnected()) {
 					try {
 						try {
@@ -448,8 +453,8 @@ public class InstrumentedJedisPool extends InstrumentedPool<Jedis> {
 		@Timed
 		@Metered
 		public boolean validateObject(final Object obj) {
-			if (obj instanceof Jedis) {
-				final Jedis jedis = (Jedis) obj;
+			if (obj instanceof InstrumentedJedis) {
+				final InstrumentedJedis jedis = (InstrumentedJedis) obj;
 				System.out.println("Validate jedis Id-" + jedis.hashCode());
 				try {
 					return jedis.isConnected() && jedis.ping().equals("PONG");
