@@ -46,7 +46,7 @@ public class JedisProxy implements InvocationHandler {
 		TimerContext timerContext = null;
 		try {
 			MetricName jedisCmdMetrics = buildMetricName(m, metricScope);
-			System.out.println("metricName="+ jedisCmdMetrics);
+			//System.out.println("metricName="+ jedisCmdMetrics);
 			jedisCmdTimer = buildTimer(registry, jedisCmdMetrics);
 			timerContext = jedisCmdTimer.time();
 			result = m.invoke(jedis, args);
@@ -69,9 +69,9 @@ public class JedisProxy implements InvocationHandler {
 		InstrumentedJedis jedis;
 		try {
 			jedis = jedisPool.getResource();
-			if (jedis instanceof Jedis){
-				System.out.println("class = " + jedis.getClass() + "checkouted out-" + jedis.hashCode());
-			}
+//			if (jedis instanceof Jedis){
+//				System.out.println("class = " + jedis.getClass() + "checked out-" + jedis.hashCode());
+//			}
 		} catch (JedisConnectionException e) {
 			throw new JedisException(
 					"Unable to get Jedis resource before timeout.", e);
@@ -79,7 +79,7 @@ public class JedisProxy implements InvocationHandler {
 		return jedis;
 	}
 
-	private void returnJedis(Jedis jedis) {
+	private void returnJedis(InstrumentedJedis jedis) {
 		try {
 			if (jedis.isConnected()) {
 				jedis.ping();

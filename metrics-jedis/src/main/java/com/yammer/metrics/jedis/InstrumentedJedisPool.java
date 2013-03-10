@@ -85,7 +85,6 @@ public class InstrumentedJedisPool extends InstrumentedPool<InstrumentedJedis> {
 	private static final String DEFAULT_METRIC_SCOPE = "default";
 
 	private Counter tasksSubmittedCounter = null;
-	private Timer workerRunTimer = null;
 	private Counter poolObjectsCounter = null;
 
 	private static final String MAX_ACTIVE = "max-active";
@@ -94,7 +93,6 @@ public class InstrumentedJedisPool extends InstrumentedPool<InstrumentedJedis> {
 	private static final String NUM_ACTIVE = "num-active";
 	private static final String NUM_IDLE = "num-idle";
 	private static final String PERCENT_IDLE = "percent-idle";
-	private static final String WORKER_TIME = "worker-time";
 	private static final String POOL_OBJECTS_COUNT = "pool-objects-count";
 	public MetricName maxActive = new MetricName(this.getClass(), MAX_ACTIVE);
 	public MetricName maxIdle = new MetricName(this.getClass(), MAX_IDLE);
@@ -104,9 +102,7 @@ public class InstrumentedJedisPool extends InstrumentedPool<InstrumentedJedis> {
 	private String metricScope = DEFAULT_METRIC_SCOPE;
 	public MetricName percentIdle = new MetricName(this.getClass(),
 			PERCENT_IDLE, metricScope);
-	public MetricName workerTimeMetric = new MetricName(this.getClass(),
-			WORKER_TIME, metricScope);
-	private MetricName poolObjectsCounterMetric = new MetricName(
+	public MetricName poolObjectsCounterMetric = new MetricName(
 			this.getClass(), POOL_OBJECTS_COUNT, metricScope);
 
 	/**
@@ -289,8 +285,6 @@ public class InstrumentedJedisPool extends InstrumentedPool<InstrumentedJedis> {
 		numActive = new MetricName(this.getClass(), NUM_ACTIVE, metricScope);
 		numIdle = new MetricName(this.getClass(), NUM_IDLE, metricScope);
 		percentIdle = new MetricName(this.getClass(), PERCENT_IDLE, metricScope);
-		workerTimeMetric = new MetricName(this.getClass(), WORKER_TIME,
-				metricScope);
 		poolObjectsCounterMetric = new MetricName(this.getClass(),
 				POOL_OBJECTS_COUNT, metricScope);
 
@@ -339,9 +333,6 @@ public class InstrumentedJedisPool extends InstrumentedPool<InstrumentedJedis> {
 
 		// Add metric counter to start counting the number of tasks submitted
 		poolObjectsCounter = registry.newCounter(poolObjectsCounterMetric);
-		// Add the timer metric to capture runnable execution time
-		workerRunTimer = registry.newTimer(workerTimeMetric,
-				TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
 	}
 
 	/**
