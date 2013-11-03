@@ -20,7 +20,6 @@
         <module>metrics-benchmarks</module>
         <module>metrics-core</module>
         <module>metrics-healthchecks</module>
-        <module>metrics-jedis</module>
         <module>metrics-ehcache</module>
         <module>metrics-ganglia</module>
         <module>metrics-graphite</module>
@@ -35,6 +34,8 @@
         <module>metrics-logback</module>
         <module>metrics-servlet</module>
         <module>metrics-servlets</module>
+        <module>metrics-threadpool</module>
+        <module>metrics-jedis</module>
     </modules>
 
     <properties>
