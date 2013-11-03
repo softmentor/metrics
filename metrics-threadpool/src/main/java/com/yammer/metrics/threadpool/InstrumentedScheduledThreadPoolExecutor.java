@@ -33,7 +33,7 @@ import com.yammer.metrics.threadpool.decorated.DecoratedScheduledThreadPoolExecu
 public class InstrumentedScheduledThreadPoolExecutor extends
 		DecoratedScheduledThreadPoolExecutor {
 	private MetricsRegistry registry = null;
-	private String metricName;
+	private String metricName = "threads";
 	private Timer tasksExecTimer = null;
 	private Timer workerRunTimer = null;
 	private Counter tasksSubmittedCounter = null;

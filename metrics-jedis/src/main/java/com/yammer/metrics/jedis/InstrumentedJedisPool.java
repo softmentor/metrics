@@ -1,7 +1,6 @@
 package com.yammer.metrics.jedis;
 
 import java.net.URI;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.pool.BasePoolableObjectFactory;
 import org.apache.commons.pool.impl.GenericObjectPool;
@@ -21,7 +20,6 @@ import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.core.MetricName;
 import com.yammer.metrics.core.MetricsRegistry;
-import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.util.PercentGauge;
 
 /**
@@ -84,7 +82,6 @@ public class InstrumentedJedisPool extends InstrumentedPool<InstrumentedJedis> {
 	private MetricsRegistry registry = null;
 	private static final String DEFAULT_METRIC_SCOPE = "default";
 
-	private Counter tasksSubmittedCounter = null;
 	private Counter poolObjectsCounter = null;
 
 	private static final String MAX_ACTIVE = "max-active";
@@ -419,6 +416,7 @@ public class InstrumentedJedisPool extends InstrumentedPool<InstrumentedJedis> {
 						try {
 							jedis.quit();
 						} catch (Exception e) {
+							
 						}
 						jedis.disconnect();
 					} catch (Exception e) {

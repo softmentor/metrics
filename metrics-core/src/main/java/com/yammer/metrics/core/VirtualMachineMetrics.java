@@ -349,7 +349,7 @@ public class VirtualMachineMetrics {
 
                 threads.add(
                         String.format(
-                                "%s locked on %s (owned by %s):\n%s",
+                                "%s locked on %s (owned by %s):%n%s",
                                 info.getThreadName(), info.getLockName(),
                                 info.getLockOwnerName(),
                                 stackTrace.toString()
@@ -406,14 +406,14 @@ public class VirtualMachineMetrics {
                           t.getThreadState());
             final LockInfo lock = t.getLockInfo();
             if (lock != null && t.getThreadState() != Thread.State.BLOCKED) {
-                writer.printf("\n    - waiting on <0x%08x> (a %s)",
+                writer.printf("%n    - waiting on <0x%08x> (a %s)",
                               lock.getIdentityHashCode(),
                               lock.getClassName());
-                writer.printf("\n    - locked <0x%08x> (a %s)",
+                writer.printf("%n    - locked <0x%08x> (a %s)",
                               lock.getIdentityHashCode(),
                               lock.getClassName());
             } else if (lock != null && t.getThreadState() == Thread.State.BLOCKED) {
-                writer.printf("\n    - waiting to lock <0x%08x> (a %s)",
+                writer.printf("%n    - waiting to lock <0x%08x> (a %s)",
                               lock.getIdentityHashCode(),
                               lock.getClassName());
             }
@@ -428,7 +428,7 @@ public class VirtualMachineMetrics {
 
             writer.println();
             if (t.getLockOwnerName() != null) {
-                writer.printf("     owned by %s id=%d\n", t.getLockOwnerName(), t.getLockOwnerId());
+                writer.printf("     owned by %s id=%d%n", t.getLockOwnerName(), t.getLockOwnerId());
             }
 
             final StackTraceElement[] elements = t.getStackTrace();
@@ -436,11 +436,11 @@ public class VirtualMachineMetrics {
 
             for (int i = 0; i < elements.length; i++) {
                 final StackTraceElement element = elements[i];
-                writer.printf("    at %s\n", element);
+                writer.printf("    at %s%n", element);
                 for (int j = 1; j < monitors.length; j++) {
                     final MonitorInfo monitor = monitors[j];
                     if (monitor.getLockedStackDepth() == i) {
-                        writer.printf("      - locked %s\n", monitor);
+                        writer.printf("      - locked %s%n", monitor);
                     }
                 }
             }
@@ -448,9 +448,9 @@ public class VirtualMachineMetrics {
 
             final LockInfo[] locks = t.getLockedSynchronizers();
             if (locks.length > 0) {
-                writer.printf("    Locked synchronizers: count = %d\n", locks.length);
+                writer.printf("    Locked synchronizers: count = %d%n", locks.length);
                 for (LockInfo l : locks) {
-                    writer.printf("      - %s\n", l);
+                    writer.printf("      - %s%n", l);
                 }
                 writer.println();
             }

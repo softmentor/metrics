@@ -117,4 +117,35 @@ public class DecoratedRunnableScheduledFuture<V> implements RunnableScheduledFut
 		return this.underlyingFutureTask.isPeriodic();
 	}
 
+  /**
+   * @see java.lang.Object#hashCode()
+   */
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((decoratedRunnable == null) ? 0 : decoratedRunnable.hashCode());
+    result =
+        prime * result + ((underlyingFutureTask == null) ? 0 : underlyingFutureTask.hashCode());
+    return result;
+  }
+
+  /**
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null) return false;
+    if (getClass() != obj.getClass()) return false;
+    DecoratedRunnableScheduledFuture other = (DecoratedRunnableScheduledFuture) obj;
+    if (decoratedRunnable == null) {
+      if (other.decoratedRunnable != null) return false;
+    } else if (!decoratedRunnable.equals(other.decoratedRunnable)) return false;
+    if (underlyingFutureTask == null) {
+      if (other.underlyingFutureTask != null) return false;
+    } else if (!underlyingFutureTask.equals(other.underlyingFutureTask)) return false;
+    return true;
+  }
+
 }

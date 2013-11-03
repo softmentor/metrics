@@ -12,7 +12,38 @@ import java.util.concurrent.TimeoutException;
  */
 public class DecoratedCallableScheduledFuture<V> implements RunnableScheduledFuture<V> {
 
-	private DecoratedCallable<V> decoratedCallable;
+	/**
+   * @see java.lang.Object#hashCode()
+   */
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((decoratedCallable == null) ? 0 : decoratedCallable.hashCode());
+    result =
+        prime * result + ((underlyingFutureTask == null) ? 0 : underlyingFutureTask.hashCode());
+    return result;
+  }
+
+  /**
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null) return false;
+    if (getClass() != obj.getClass()) return false;
+    DecoratedCallableScheduledFuture other = (DecoratedCallableScheduledFuture) obj;
+    if (decoratedCallable == null) {
+      if (other.decoratedCallable != null) return false;
+    } else if (!decoratedCallable.equals(other.decoratedCallable)) return false;
+    if (underlyingFutureTask == null) {
+      if (other.underlyingFutureTask != null) return false;
+    } else if (!underlyingFutureTask.equals(other.underlyingFutureTask)) return false;
+    return true;
+  }
+
+  private DecoratedCallable<V> decoratedCallable;
 	private RunnableScheduledFuture<V> underlyingFutureTask;
 
 	public DecoratedCallableScheduledFuture(DecoratedCallable<V> originalCallable,
