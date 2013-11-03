@@ -21,13 +21,33 @@ Just add the ``metrics-core`` library as a dependency:
 
     <dependencies>
         <dependency>
-            <groupId>com.yammer.metrics</groupId>
+            <groupId>com.codahale.metrics</groupId>
             <artifactId>metrics-core</artifactId>
-            <version>2.1.3</version>
+            <version>${metrics.version}</version>
         </dependency>
     </dependencies>
 
+.. note::
+
+    Make sure you have a ``metrics.version`` property declared in your POM with the current version,
+    which is |release|.
+
 Now it's time to add some metrics to your application!
+
+.. _gs-registry:
+
+The Registry
+============
+
+The centerpiece of Metrics is the ``MetricRegistry`` class, which is the container for all your
+application's metrics. Go ahead and create a new one:
+
+.. code-block:: java
+
+    final MetricRegistry metrics = new MetricRegistry();
+
+You'll probably want to integrate this into your application's lifecycle (maybe using your
+dependency injection framework), but ``static`` field is fine.
 
 .. _gs-gauges:
 
@@ -40,21 +60,34 @@ of pending jobs in a queue:
 .. code-block:: java
 
     public class QueueManager {
-        private Queue queue;
+        private final Queue queue;
 
-        private final Gauge<Integer> myGauge = 
-            Metrics.newGauge(QueueManager.class, "pending-jobs", new Gauge<Integer>() {
-                @Override
-                public Integer value() {
-                    return queue.size();
-                }
-            });
+        public QueueManager(MetricRegistry metrics, String name) {
+            this.queue = new Queue();
+            metrics.register(MetricRegistry.name(QueueManager.class, name, "size"),
+                             new Gauge<Integer>() {
+                                 @Override
+                                 public Integer getValue() {
+                                     return queue.size();
+                                 }
+                             });
+        }
     }
 
-Every time this gauge is measured, it will return the number of jobs in the queue.
+When this gauge is measured, it will return the number of jobs in the queue.
+
+Every metric in a registry has a unique name, which is just a dotted-name string like
+``"things.count"`` or ``"com.example.Thing.latency"``. ``MetricRegistry`` has a static helper method
+for constructing these names:
+
+.. code-block:: java
+
+    MetricRegistry.name(QueueManager.class, "jobs", "size")
+
+This will return a string with something like ``"com.example.QueueManager.jobs.size"``.
 
 For most queue and queue-like structures, you won't want to simply return ``queue.size()``. Most of
-``java.util`` and ``java.util.concurrent`` have implementations of ``#size()`` which are ``O(n)``,
+``java.util`` and ``java.util.concurrent`` have implementations of ``#size()`` which are **O(n)**,
 which means your gauge will be slow (potentially while holding a lock).
 
 .. _gs-counters:
@@ -67,7 +100,7 @@ For example, we may want a more efficient way of measuring the pending job in a 
 
 .. code-block:: java
 
-    private final Counter pendingJobs = Metrics.newCounter(QueueManager.class, "pending-jobs");
+    private final Counter pendingJobs = metrics.counter(name(QueueManager.class, "pending-jobs"));
 
     public void addJob(Job job) {
         pendingJobs.inc();
@@ -81,6 +114,14 @@ For example, we may want a more efficient way of measuring the pending job in a 
 
 Every time this counter is measured, it will return the number of jobs in the queue.
 
+As you can see, the API for counters is slightly different: ``#counter(String)`` instead of
+``#register(String, Metric)``. While you can use ``register`` and create your own ``Counter``
+instance, ``#counter(String)`` does all the work for you, and allows you to reuse metrics with the
+same name.
+
+Also, we've statically imported ``MetricRegistry``'s ``name`` method in this scope to reduce
+clutter.
+
 .. _gs-meters:
 
 Meters
@@ -91,7 +132,7 @@ rate, meters also track 1-, 5-, and 15-minute moving averages.
 
 .. code-block:: java
 
-    private final Meter requests = Metrics.newMeter(RequestHandler.class, "requests", "requests", TimeUnit.SECONDS);
+    private final Meter requests = metrics.meter(name(RequestHandler.class, "requests"));
 
     public void handleRequest(Request request, Response response) {
         requests.mark();
@@ -111,7 +152,7 @@ percentiles.
 
 .. code-block:: java
 
-    private final Histogram responseSizes = Metrics.newHistogram(RequestHandler.class, "response-sizes");
+    private final Histogram responseSizes = metrics.histogram(name(RequestHandler.class, "response-sizes");
 
     public void handleRequest(Request request, Response response) {
         // etc
@@ -131,10 +172,10 @@ duration.
 
 .. code-block:: java
 
-    private final Timer responses = Metrics.newTimer(RequestHandler.class, "responses", TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
+    private final Timer responses = metrics.timer(name(RequestHandler.class, "responses"));
 
     public String handleRequest(Request request, Response response) {
-        final TimerContext context = responses.time();
+        final Timer.Context context = responses.time();
         try {
             // etc;
             return "OK";
@@ -143,7 +184,7 @@ duration.
         }
     }
 
-This timer will measure the amount of time it takes to process each request in milliseconds and
+This timer will measure the amount of time it takes to process each request in nanoseconds and
 provide a rate of requests in requests per second.
 
 
@@ -152,29 +193,32 @@ provide a rate of requests in requests per second.
 Health Checks
 =============
 
-Metrics also has the ability to centralize your service's health checks. First, implement a
-``HealthCheck`` instance:
+Metrics also has the ability to centralize your service's health checks with the
+``metrics-healthchecks`` module.
 
-
+First, create a new ``HealthCheckRegistry`` instance:
 
 .. code-block:: java
 
-    import com.yammer.metrics.core.HealthCheck.Result;
+    final HealthCheckRegistry healthChecks = new HealthCheckRegistry();
+
+Second, implement a ``HealthCheck`` subclass:
+
+.. code-block:: java
 
     public class DatabaseHealthCheck extends HealthCheck {
         private final Database database;
 
         public DatabaseHealthCheck(Database database) {
-            super("database");
             this.database = database;
         }
 
         @Override
-        public Result check() throws Exception {
+        public HealthCheck.Result check() throws Exception {
             if (database.isConnected()) {
-                return Result.healthy();
+                return HealthCheck.Result.healthy();
             } else {
-                return Result.unhealthy("Cannot connect to " + database.getUrl());
+                return HealthCheck.Result.unhealthy("Cannot connect to " + database.getUrl());
             }
         }
     }
@@ -183,15 +227,14 @@ Then register an instance of it with Metrics:
 
 .. code-block:: java
 
-    HealthChecks.register(new DatabaseHealthCheck(database));
+    healthChecks.register("postgres", new DatabaseHealthCheck(database));
 
 To run all of the registered health checks:
 
 .. code-block:: java
 
-
-    final Map<String, Result> results = HealthChecks.runHealthChecks();
-    for (Entry<String, Result> entry : results.entrySet()) {
+    final Map<String, HealthCheck.Result> results = healthChecks.runHealthChecks();
+    for (Entry<String, HealthCheck.Result> entry : results.entrySet()) {
         if (entry.getValue().isHealthy()) {
             System.out.println(entry.getKey() + " is healthy");
         } else {
@@ -203,15 +246,23 @@ To run all of the registered health checks:
         }
     }
 
-Metrics comes with a pre-built health check: ``DeadlockHealthCheck``, which uses Java 1.6's built-in
-thread deadlock detection to determine if any threads are deadlocked.
+Metrics comes with a pre-built health check: ``ThreadDeadlockHealthCheck``, which uses Java's
+built-in thread deadlock detection to determine if any threads are deadlocked.
 
 .. _gs-jmx:
 
 Reporting Via JMX
 =================
 
-All metrics are visible via **JConsole** or **VisualVM** (if you install the JConsole plugin):
+To report metrics via JMX:
+
+.. code-block:: java
+
+    final JmxReporter reporter = JmxReporter.forRegistry(registry).build();
+    reporter.start();
+
+Once the reporter is started, all of the metrics in the registry will become visible via
+**JConsole** or **VisualVM** (if you install the MBeans plugin):
 
 .. image:: metrics-visualvm.png
     :alt: Metrics exposed as JMX MBeans being viewed in VisualVM's MBeans browser
@@ -220,7 +271,6 @@ All metrics are visible via **JConsole** or **VisualVM** (if you install the JCo
 
     If you double-click any of the metric properties, VisualVM will start graphing the data for that
     property. Sweet, eh?
-
 
 .. _gs-http:
 
@@ -233,15 +283,20 @@ registered metrics. It will also run health checks, print out a thread dump, and
 ``HealthCheckServlet``, ``ThreadDumpServlet``, and ``PingServlet``--which do these individual
 tasks.)
 
-To use this servlet, include the ``metrics-servlet`` module as a dependency:
+To use this servlet, include the ``metrics-servlets`` module as a dependency:
 
 .. code-block:: xml
 
     <dependency>
-        <groupId>com.yammer.metrics</groupId>
-        <artifactId>metrics-servlet</artifactId>
-        <version>2.1.2</version>
+        <groupId>com.codahale.metrics</groupId>
+        <artifactId>metrics-servlets</artifactId>
+        <version>${metrics.version}</version>
     </dependency>
+
+.. note::
+
+    Make sure you have a ``metrics.version`` property declared in your POM with the current version,
+    which is |release|.
 
 From there on, you can map the servlet to whatever path you see fit.
 
@@ -254,5 +309,6 @@ In addition to JMX and HTTP, Metrics also has reporters for the following output
 
 * ``STDOUT``, using :ref:`ConsoleReporter <man-core-reporters-console>` from ``metrics-core``
 * ``CSV`` files, using :ref:`CsvReporter <man-core-reporters-csv>` from ``metrics-core``
+* SLF4J loggers, using :ref:`Slf4jReporter <man-core-reporters-slf4j>` from ``metrics-core``
 * Ganglia, using :ref:`GangliaReporter <manual-ganglia>` from ``metrics-ganglia``
 * Graphite, using :ref:`GraphiteReporter <manual-graphite>` from ``metrics-graphite``

@@ -4,25 +4,145 @@
 Release Notes
 #############
 
+.. _rel-3.0.1:
+
+v3.0.1: Jul 23 2013
+===================
+
+* Fixed NPE in ``MetricRegistry#name``.
+* ``ScheduledReporter`` and ``JmxReporter`` now implement ``Closeable``.
+* Fixed cast exception for async requests in ``metrics-jetty9``.
+* Added support for ``Access-Control-Allow-Origin`` to ``MetricsServlet``.
+* Fixed numerical issue with ``Meter`` EWMA rates.
+* Deprecated ``AdminServletContextListener`` in favor of ``MetricsServlet.ContextListener`` and
+  ``HealthCheckServlet.ContextListener``.
+* Added additional constructors to ``HealthCheckServlet`` and ``MetricsServlet``.
+
 .. _rel-3.0.0:
 
-v3.0.0-SNAPSHOT
-===============
+v3.0.0: June 10 2013
+====================
 
-* Added ``AdminServlet#setServiceName()``.
-* Switched all getters to the standard ``#getValue()``.
-* Use the full metric name in ``CsvReporter``.
-* Made ``DefaultWebappMetricsFilter``'s registry configurable.
-* Switched to ``HttpServletRequest#getContextPath()`` in ``AdminServlet``.
-* Upgraded to Logback 1.0.3.
+* Renamed ``DefaultWebappMetricsFilter`` to ``InstrumentedFilter``.
+* Renamed ``MetricsContextListener`` to ``InstrumentedFilterContextListener`` and made it fully
+  abstract to avoid confusion.
+* Renamed ``MetricsServletContextListener`` to ``AdminServletContextListener`` and made it fully
+  abstract to avoid confusion.
+* Upgraded to Servlet API 3.1.
+* Upgraded to Jackson 2.2.2.
+* Upgraded to Jetty 8.1.11.
+
+.. _rel-3.0.0-RC1:
+
+v3.0.0-RC1: May 31 2013
+=======================
+
+* Added ``SharedMetricRegistries``, a singleton for sharing named metric registries.
+* Fixed XML configuration for ``metrics-ehcache``.
+* Fixed XML configuration for ``metrics-jersey``.
+* Fixed XML configuration for ``metrics-log4j``.
+* Fixed XML configuration for ``metrics-logback``.
+* Fixed a counting bug in ``metrics-jetty9``'s InstrumentedHandler.
+* Added ``MetricsContextListener`` to ``metrics-servlet``.
+* Added ``MetricsServletContextListener`` to ``metrics-servlets``.
+* Extracted the ``Counting`` interface.
+* Reverted ``SlidingWindowReservoir`` to a synchronized implementation.
+* Added the implementation version to the JAR manifests.
+* Made dependencies for all modules conform to Maven Enforcer's convergence rules.
+* Fixed ``Slf4jReporter``'s logging of 99th percentiles.
+* Added optional name prefixing to ``GraphiteReporter``.
+* Added metric-specific overrides of rate and duration units to ``JmxReporter``.
+* Documentation fixes.
+
+.. _rel-3.0.0-BETA3:
+
+v3.0.0-BETA3: May 13 2013
+=========================
+
+* Added ``ScheduledReporter#report()`` for manual reporting.
+* Fixed overly-grabby catches in ``HealthCheck`` and
+  ``InstrumentedResourceMethodDispatchProvider``.
+* Fixed phantom reads in ``SlidingWindowReservoir``.
+* Revamped ``metrics-jetty9``, removing ``InstrumentedConnector`` and improving
+  the API.
+* Fixed OSGi imports for ``sun.misc``.
+* Added a strategy class for ``HttpClient`` metrics.
+* Upgraded to Jetty 9.0.3.
+* Upgraded to Jackson 2.2.1.
+* Upgraded to Ehcache 2.6.6.
+* Upgraded to Logback 1.0.13.
+* Upgraded to HttpClient 4.2.5.
+* Upgraded to gmetric4j 1.0.3, which allows for host spoofing.
+
+.. _rel-3.0.0-BETA2:
+
+v3.0.0-BETA2: Apr 22 2013
+=========================
+
+* Metrics is now under the ``com.codahale.metrics`` package, with the corresponding changes in Maven
+  artifact groups. This should allow for an easier upgrade path without classpath conflicts.
+* ``MetricRegistry`` no longer has a name.
+* Added ``metrics-jetty9`` for Jetty 9.
+* ``JmxReporter`` takes an optional domain property to disambiguate multiple reporters.
+* Fixed Java 6 compatibility problem. (Also added Java 6 as a CI environment.)
+* Added ``MetricRegistryListener.Base``.
+* Switched ``Counter``, ``Meter``, and ``EWMA`` to use JSR133's ``LongAdder`` instead of
+  ``AtomicLong``, improving contended concurrency.
+* Added ``MetricRegistry#buildMap()``, allowing for custom map implementations in
+  ``MetricRegistry``.
+* Added ``MetricRegistry#removeMatching(MetricFilter)``.
+* Changed ``metrics-json`` to optionally depend on ``metrics-healthcheck``.
+* Upgraded to Jetty 8.1.10 for ``metrics-jetty8``.
+
+.. _rel-3.0.0-BETA1:
+
+v3.0.0-BETA1: Apr 01 2013
+=========================
+
+* Total overhaul of most of the core Metrics classes:
+
+  * Metric names are now just dotted paths like ``com.example.Thing``, allowing for very flexible
+    scopes, etc.
+  * Meters and timers no longer have rate or duration units; those are properties of reporters.
+  * Reporter architecture has been radically simplified, fixing many bugs.
+  * Histograms and timers can take arbitrary reservoir implementations.
+  * Added sliding window reservoir implementations.
+  * Added ``MetricSet`` for sets of metrics.
+
+* Changed package names to be OSGi-compatible and added OSGi bundling.
+* Extracted JVM instrumentation to ``metrics-jvm``.
+* Extracted Jackson integration to ``metrics-json``.
+* Removed ``metrics-guice``, ``metrics-scala``, and ``metrics-spring``.
+* Renamed ``metrics-servlet`` to ``metrics-servlets``.
+* Renamed ``metrics-web`` to ``metrics-servlet``.
+* Renamed ``metrics-jetty`` to ``metrics-jetty8``.
+* Many more small changes!
+
+.. _rel-2.2.0:
+
+v2.2.0: Nov 26 2012
+===================
+
+* Removed all OSGi bundling. This will be back in 3.0.
+* Added ``InstrumentedSslSelectChannelConnector`` and ``InstrumentedSslSocketConnector``.
+* Made all metric names JMX-safe.
+* Upgraded to Ehcache 2.6.2.
+* Upgraded to Apache HttpClient 4.2.2.
+* Upgraded to Jersey 1.15.
 * Upgraded to Log4j 1.2.17.
-* Upgraded to JDBI 2.34.
-* Upgraded to Ehcache 2.5.2.
-* Upgraded to Jackson 2.0.2.
-* Upgraded to Jetty 8.1.4.
-* Upgraded to SLF4J 1.6.5.
-* Changed package names in ``metrics-ganglia``, ``metrics-graphite``, and ``metrics-servlet``.
-* Removed ``metrics-guice`` and ``metrics-spring``.
+* Upgraded to Logback 1.0.7.
+* Upgraded to Spring 3.1.3.
+* Upgraded to Jetty 8.1.8.
+* Upgraded to SLF4J 1.7.2.
+* Replaced usage of ``Unsafe`` in ``InstrumentedResourceMethodDispatchProvider`` with type erasure
+  trickery.
+
+.. _rel-2.1.5:
+
+v2.1.5: Nov 19 2012
+===================
+
+* Upgraded to Jackson 2.1.1.
 
 .. _rel-2.1.4:
 
